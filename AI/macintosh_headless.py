@@ -23,7 +23,8 @@ TTS_MODEL = os.environ.get("TTS_MODEL", "gpt-4o-mini-tts")
 TTS_VOICE = os.environ.get("TTS_VOICE", "alloy")
 TTS_BACKEND = os.environ.get("TTS_BACKEND", "openai").lower()
 FULLSCREEN = os.environ.get("FULLSCREEN", "1") != "0"
-ESPEAK_VOICE = os.environ.get("ESPEAK_VOICE", "sv" if LANG.startswith("sv") else "en")
+# Default to Swedish male variant when STT_LANG is Swedish; else English
+ESPEAK_VOICE = os.environ.get("ESPEAK_VOICE", "sv+m3" if LANG.startswith("sv") else "en")
 ESPEAK_WPM = os.environ.get("ESPEAK_WPM", "160")
 INTRO = os.environ.get(
     "INTRO",

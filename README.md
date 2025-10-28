@@ -20,7 +20,7 @@ export OPENAI_API_KEY=sk-...
 
 Notes:
 - Press ESC to quit the fullscreen UI
-- Env overrides: `MIC_DEVICE_INDEX`, `STT_LANG` (default `sv-SE`), `TTS_BACKEND` (`openai`|`espeak`), `FULLSCREEN` (`1` or `0`), `ESPEAK_VOICE` (e.g. `sv`, `sv+f3`, `en-us`, `en-uk`), `ESPEAK_WPM` (default `160`), `TTS_VOICE` (OpenAI voice e.g. `alloy`, `verse`)
+- Env overrides: `MIC_DEVICE_INDEX`, `STT_LANG` (default `sv-SE`), `TTS_BACKEND` (`openai`|`espeak`), `FULLSCREEN` (`1` or `0`), `ESPEAK_VOICE` (default `sv+m3`), `ESPEAK_WPM` (default `160`), `TTS_VOICE` (OpenAI voice e.g. `alloy`, `verse`)
 - Examples:
   - Local Swedish female: `ESPEAK_VOICE=sv+f3 ./run_demo.sh`
   - Local UK English: `STT_LANG=en-GB ESPEAK_VOICE=en-uk ./run_demo.sh`
