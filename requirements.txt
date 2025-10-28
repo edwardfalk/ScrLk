@@ -1,0 +1,5 @@
+openai>=1.40.0
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.14; platform_system != 'Linux'
+PyAudio; platform_system == 'Linux'
+pydub>=0.25.1

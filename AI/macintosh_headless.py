@@ -6,14 +6,30 @@ import speech_recognition as sr
 from openai import OpenAI
 
 # ------------- CONFIG -------------
-MIC_DEVICE_INDEX = 1          # your Sandberg mic index
-LANG = "sv-SE"                # speech recognition language
-LLM_MODEL = "gpt-4o-mini"
-TTS_MODEL = "gpt-4o-mini-tts"
-TTS_VOICE = "alloy"           # try: alloy, verse, etc.
-INTRO = ("Hej. Jag heter Macintosh. Jag jobbar för E Q två. "
-         "Jag finns här med dig och lyssnar. Hur mår du just nu?")
-SYSTEM_PROMPT = (
+# All overridable via environment variables for quick demos on the Pi
+# MIC_DEVICE_INDEX: int ALSA index (default 1)
+# STT_LANG: STT language code (default sv-SE)
+# LLM_MODEL: chat model (default gpt-4o-mini)
+# TTS_MODEL: tts model (default gpt-4o-mini-tts)
+# TTS_VOICE: openai voice (default alloy)
+# TTS_BACKEND: "openai" (default) or "espeak" to force local-only
+# FULLSCREEN: "1" default, set to "0" to windowed for debugging
+# INTRO: greeting text
+# SYSTEM_PROMPT: persona prompt
+MIC_DEVICE_INDEX = int(os.environ.get("MIC_DEVICE_INDEX", "1"))
+LANG = os.environ.get("STT_LANG", os.environ.get("LANG", "sv-SE"))
+LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+TTS_MODEL = os.environ.get("TTS_MODEL", "gpt-4o-mini-tts")
+TTS_VOICE = os.environ.get("TTS_VOICE", "alloy")
+TTS_BACKEND = os.environ.get("TTS_BACKEND", "openai").lower()
+FULLSCREEN = os.environ.get("FULLSCREEN", "1") != "0"
+INTRO = os.environ.get(
+    "INTRO",
+    "Hej. Jag heter Macintosh. Jag jobbar för E Q två. "
+    "Jag finns här med dig och lyssnar. Hur mår du just nu?"
+)
+SYSTEM_PROMPT = os.environ.get(
+    "SYSTEM_PROMPT",
     "Du är Macintosh, en empatisk stöddator för EQ2. "
     "Svara kort, varmt och naturligt på svenska, 1–2 meningar."
 )
@@ -69,33 +85,43 @@ def play_mp3(path):
         debug(f"[PLAY FEL] {e}")
 
 def speak(text):
-    # Try OpenAI TTS -> mp3 -> play; else fall back to espeak
+    # Prefer OpenAI TTS unless forced to espeak or API key missing
     debug(f"[TTS] {text}")
-    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
-        mp3_path = tmp.name
-    try:
-        speech = client.audio.speech.create(model=TTS_MODEL, voice=TTS_VOICE, input=text)
-        # support different client payload shapes
-        if hasattr(speech, "read"):
-            audio_bytes = speech.read()
-        elif hasattr(speech, "content"):
-            audio_bytes = speech.content
-        else:
-            audio_bytes = bytes(speech)
-        with open(mp3_path, "wb") as f:
-            f.write(audio_bytes)
-        play_mp3(mp3_path)
-    except Exception as e:
-        debug(f"[TTS FEL] {e}")
-        subprocess.run(["espeak","-v","sv","-s","160",text],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    use_openai = (
+        TTS_BACKEND == "openai" and bool(os.environ.get("OPENAI_API_KEY"))
+    )
+    if use_openai:
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp:
+            mp3_path = tmp.name
+        try:
+            speech = client.audio.speech.create(model=TTS_MODEL, voice=TTS_VOICE, input=text)
+            # support different client payload shapes
+            if hasattr(speech, "read"):
+                audio_bytes = speech.read()
+            elif hasattr(speech, "content"):
+                audio_bytes = speech.content
+            else:
+                audio_bytes = bytes(speech)
+            with open(mp3_path, "wb") as f:
+                f.write(audio_bytes)
+            play_mp3(mp3_path)
+            return
+        except Exception as e:
+            debug(f"[TTS FEL/OpenAI] {e} -> fallback to espeak")
+    # local fallback
+    subprocess.run([
+        "espeak","-v", ("sv" if LANG.startswith("sv") else "en"), "-s","160", text
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 # ------------- TK: MAC FACE -------------
 class MacFace:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Macintosh EQ2")
-        self.root.attributes("-fullscreen", True)
+        if FULLSCREEN:
+            self.root.attributes("-fullscreen", True)
+        else:
+            self.root.geometry("1000x700+50+50")
         self.root.configure(bg="#111")
         self.root.bind("<Escape>", lambda e: self.quit())
 
