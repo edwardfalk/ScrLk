@@ -23,6 +23,8 @@ TTS_MODEL = os.environ.get("TTS_MODEL", "gpt-4o-mini-tts")
 TTS_VOICE = os.environ.get("TTS_VOICE", "alloy")
 TTS_BACKEND = os.environ.get("TTS_BACKEND", "openai").lower()
 FULLSCREEN = os.environ.get("FULLSCREEN", "1") != "0"
+ESPEAK_VOICE = os.environ.get("ESPEAK_VOICE", "sv" if LANG.startswith("sv") else "en")
+ESPEAK_WPM = os.environ.get("ESPEAK_WPM", "160")
 INTRO = os.environ.get(
     "INTRO",
     "Hej. Jag heter Macintosh. Jag jobbar för E Q två. "
@@ -110,7 +112,7 @@ def speak(text):
             debug(f"[TTS FEL/OpenAI] {e} -> fallback to espeak")
     # local fallback
     subprocess.run([
-        "espeak","-v", ("sv" if LANG.startswith("sv") else "en"), "-s","160", text
+        "espeak","-v", ESPEAK_VOICE, "-s", ESPEAK_WPM, text
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 # ------------- TK: MAC FACE -------------

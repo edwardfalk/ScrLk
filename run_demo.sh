@@ -20,5 +20,7 @@ export TTS_MODEL="${TTS_MODEL:-gpt-4o-mini-tts}"
 export TTS_VOICE="${TTS_VOICE:-alloy}"
 export TTS_BACKEND="${TTS_BACKEND:-openai}"
 export FULLSCREEN="${FULLSCREEN:-1}"
+export ESPEAK_VOICE="${ESPEAK_VOICE:-sv}"
+export ESPEAK_WPM="${ESPEAK_WPM:-160}"
 
 python3 AI/macintosh_headless.py
