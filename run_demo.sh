@@ -22,5 +22,9 @@ export TTS_BACKEND="${TTS_BACKEND:-openai}"
 export FULLSCREEN="${FULLSCREEN:-1}"
 export ESPEAK_VOICE="${ESPEAK_VOICE:-sv+m3}"
 export ESPEAK_WPM="${ESPEAK_WPM:-160}"
+export AVATAR_IDLE="${AVATAR_IDLE:-assets/avatar_idle.png}"
+export AVATAR_TALK="${AVATAR_TALK:-assets/avatar_talk.png}"
+export AVATAR_FPS="${AVATAR_FPS:-8}"
+export AVATAR_SCALE="${AVATAR_SCALE:-1.0}"
 
 python3 AI/macintosh_headless.py

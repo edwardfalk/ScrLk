@@ -27,4 +27,10 @@ Notes:
   - OpenAI voice: `TTS_BACKEND=openai TTS_VOICE=verse ./run_demo.sh`
 - If no API key or `TTS_BACKEND=espeak`, voice uses local `espeak`
 
+### Avatar images
+- Put your images in `assets/` and set:
+  - `AVATAR_IDLE` (default `assets/avatar_idle.png`)
+  - `AVATAR_TALK` (default `assets/avatar_talk.png`)
+- When speaking, the UI toggles between IDLE and TALK at `AVATAR_FPS` (default 8 fps). Scale with `AVATAR_SCALE` (default 1.0).
+
 AI entrypoint: `AI/macintosh_headless.py`

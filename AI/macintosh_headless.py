@@ -2,6 +2,11 @@
 import os, time, math, random, tempfile, subprocess, threading, traceback, sys
 import tkinter as tk
 from tkinter import Canvas
+try:
+    from PIL import Image, ImageTk  # for avatar image support
+except Exception:
+    Image = None
+    ImageTk = None
 import speech_recognition as sr
 from openai import OpenAI
 
@@ -26,6 +31,12 @@ FULLSCREEN = os.environ.get("FULLSCREEN", "1") != "0"
 # Default to Swedish male variant when STT_LANG is Swedish; else English
 ESPEAK_VOICE = os.environ.get("ESPEAK_VOICE", "sv+m3" if LANG.startswith("sv") else "en")
 ESPEAK_WPM = os.environ.get("ESPEAK_WPM", "160")
+
+# Avatar images (optional): when set, we render images instead of vector face
+AVATAR_IDLE_PATH = os.environ.get("AVATAR_IDLE", "assets/avatar_idle.png")
+AVATAR_TALK_PATH = os.environ.get("AVATAR_TALK", "assets/avatar_talk.png")
+AVATAR_FPS = float(os.environ.get("AVATAR_FPS", "8"))  # speaking frame rate
+AVATAR_SCALE = float(os.environ.get("AVATAR_SCALE", "1.0"))  # 1.0 = fit canvas; <1 letterboxed
 INTRO = os.environ.get(
     "INTRO",
     "Hej. Jag heter Macintosh. Jag jobbar för E Q två. "
@@ -148,6 +159,15 @@ class MacFace:
         self.next_blink_t = time.time() + random.uniform(2.0, 6.0)
         self.next_wink_t  = time.time() + random.uniform(8.0, 16.0)
 
+        # avatar image state
+        self.avatar_enabled = False
+        self.avatar_idle_img = None
+        self.avatar_talk_img = None
+        self.avatar_last_frame_t = 0.0
+        self.avatar_toggle = False
+
+        self._load_avatar_if_available()
+
         # mouse look
         self.root.bind("<Motion>", self.track_mouse)
 
@@ -168,8 +188,44 @@ class MacFace:
         self.eye_offset_y = max(-8,  min(8,  dy*300))
         self.head_tilt    = max(-4,  min(4,  dx*20))
 
+    def _load_avatar_if_available(self):
+        if Image is None or ImageTk is None:
+            return
+        try:
+            if os.path.exists(AVATAR_IDLE_PATH) and os.path.exists(AVATAR_TALK_PATH):
+                self.avatar_idle_raw = Image.open(AVATAR_IDLE_PATH).convert("RGBA")
+                self.avatar_talk_raw = Image.open(AVATAR_TALK_PATH).convert("RGBA")
+                self.avatar_enabled = True
+        except Exception:
+            self.avatar_enabled = False
+
+    def _draw_avatar(self):
+        # Scale images to current canvas, maintaining aspect
+        cw, ch = self.w, self.h
+        if cw <= 0 or ch <= 0:
+            return
+        target_w = int(cw * AVATAR_SCALE)
+        target_h = int(ch * AVATAR_SCALE)
+        if target_w <= 0 or target_h <= 0:
+            target_w, target_h = cw, ch
+
+        # choose frame
+        raw = self.avatar_idle_raw if not self.is_speaking else (self.avatar_talk_raw if self.avatar_toggle else self.avatar_idle_raw)
+
+        img = raw.copy()
+        img.thumbnail((target_w, target_h), Image.Resampling.LANCZOS)
+        self.avatar_imgtk = ImageTk.PhotoImage(img)
+        x = (cw - self.avatar_imgtk.width()) // 2
+        y = (ch - self.avatar_imgtk.height()) // 2
+        self.canvas.create_image(x, y, anchor="nw", image=self.avatar_imgtk)
+
     def draw(self):
         self.canvas.delete("all")
+        if self.avatar_enabled:
+            # black bg
+            self.canvas.create_rectangle(0, 0, self.w, self.h, fill="#000", outline="")
+            self._draw_avatar()
+            return
         scale = min(self.w/1000, self.h/700) * 1.35  # bigger
         base_x, base_y = self.w/2, self.h/2
         tilt = self.head_tilt * scale
@@ -273,6 +329,13 @@ class MacFace:
             self.wink_left = True
             self.root.after(160, lambda: setattr(self, "wink_left", False))
             self.next_wink_t = now + random.uniform(8.0, 16.0)
+
+        # avatar frame toggle during speaking
+        if self.avatar_enabled and self.is_speaking:
+            now = time.time()
+            if now - self.avatar_last_frame_t >= (1.0 / max(1.0, AVATAR_FPS)):
+                self.avatar_toggle = not self.avatar_toggle
+                self.avatar_last_frame_t = now
 
         self.draw()
         if self._run:
